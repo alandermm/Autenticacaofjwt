@@ -2,12 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Autenticacaofjwt.Models;
+using Autenticacaofjwt.Repositorio;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using modelobasicoefjwt.Repositorio;
 
 namespace modelobasicoefjwt
@@ -29,7 +34,33 @@ namespace modelobasicoefjwt
             services.AddDbContext<AutenticacaoContext>(opt => opt.UseSqlServer(
                     configuration.GetConnectionString("BancoAutenticacao")));
 
-            
+            var signingConfigurations = new SigningConfigurations();
+
+            services.AddSingleton(signingConfigurations);
+
+            var tokenConfigurations = new TokenConfigurations();
+
+            new ConfigureFromConfigurationOptions<TokenConfigurations>(
+                configuration.GetSection("TokenConfigurations")).Configure(tokenConfigurations);
+
+            services.AddSingleton(tokenConfigurations);
+
+            services.AddAuthentication(authOptions => {
+                authOptions.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                authOptions.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(bearerOptions => {
+                var parametrosValidacao = bearerOptions.TokenValidationParameters;
+                parametrosValidacao.IssuerSigningKey = signingConfigurations.Key;
+                parametrosValidacao.ValidAudience = tokenConfigurations.Audience;
+
+                parametrosValidacao.ValidateIssuerSigningKey = true;
+            });
+
+            services.AddAuthorization(auth => {
+                auth.AddPolicy("Bearer", new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser().Build());
+            });
 
             services.AddMvc();
                                         
