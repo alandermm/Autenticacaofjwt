@@ -6,6 +6,7 @@ using System.Security.Principal;
 using Autenticacaofjwt.Models;
 using Autenticacaofjwt.Repositorio;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using modelobasicoefjwt.Models;
 using modelobasicoefjwt.Repositorio;
 
@@ -21,7 +22,7 @@ namespace Autenticacaofjwt.Controllers
 
         [HttpPost]
         public IActionResult Validar([FromBody] Usuario usuario,
-                                    [FromServices] SigningConfigurations singningConfigurations,
+                                    [FromServices] SigningConfigurations signingConfigurations,
                                     [FromServices] TokenConfigurations tokenConfigurations){
             Usuario user = _contexto.Usuarios.FirstOrDefault(c => c.Email == usuario.Email && c.Senha == usuario.Senha);
 
@@ -35,6 +36,25 @@ namespace Autenticacaofjwt.Controllers
                         new Claim(ClaimTypes.Email, user.Email)
                     }
                 );
+
+                var handler = new JwtSecurityTokenHandler();
+
+                var securityToken = handler.CreateToken(new SecurityTokenDescriptor{
+                    Issuer = tokenConfigurations.Issuer,
+                    Audience = tokenConfigurations.Audience,
+                    SigningCredentials = signingConfigurations.SigningCredentials,
+                    Subject = identity
+                });
+
+                var token = handler.WriteToken(securityToken);
+
+                var retorno = new {
+                    autenticacao = true,
+                    accessToken = token,
+                    message = "Ok"
+                };
+
+                return Ok(retorno);
             }
         }
     }
