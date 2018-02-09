@@ -56,6 +56,13 @@ namespace Autenticacaofjwt.Controllers
 
                 return Ok(retorno);
             }
+
+            var retornoerro = new{
+                autenticacao = false,
+                message = "Falha na Autenticação"
+            };
+
+            return BadRequest(retornoerro);
         }
     }
 }
